@@ -1,14 +1,18 @@
 import type { CiphersImportPayload } from '@/lib/api/vault';
 import {
   addFolder,
+  addLoginUri,
   cardBrand,
   convertToNoteIfNeeded,
+  extractTotpValue,
+  isTotpFieldName,
   makeLoginCipher,
   normalizeUri,
   parseCardExpiry,
   parseCsv,
   parseEpochMaybe,
   processKvp,
+  setLoginUris,
   txt,
   val,
 } from '@/lib/import-format-shared';
@@ -91,9 +95,12 @@ export function parseOnePasswordCsv(textRaw: string, isMac: boolean): CiphersImp
           login.password = rawVal;
           continue;
         }
-        if ((!Array.isArray(login.uris) || !login.uris.length) && (lower === 'url' || lower === 'website')) {
-          const uri = normalizeUri(rawVal);
-          login.uris = uri ? [{ uri, match: null }] : null;
+        if (lower === 'url' || lower === 'website') {
+          addLoginUri(login, rawVal);
+          continue;
+        }
+        if (!txt(login.totp) && isTotpFieldName(lower)) {
+          login.totp = rawVal;
           continue;
         }
       } else if (Number(cipher.type) === 3 && cipher.card) {
@@ -149,7 +156,7 @@ export function parseOnePasswordCsv(textRaw: string, isMac: boolean): CiphersImp
         }
       }
 
-      if (!ignored.has(lower) && !lower.startsWith('section:') && !lower.startsWith('section ')) {
+      if (!ignored.has(lower) && !isTotpFieldName(lower) && !lower.startsWith('section:') && !lower.startsWith('section ')) {
         if (!altUsername && lower === 'email') altUsername = rawVal;
         if (lower === 'created date' || lower === 'modified date') {
           const readable = parseEpochMaybe(rawVal);
@@ -197,8 +204,8 @@ function parseOnePasswordFieldsIntoCipher(
         login.password = value;
         continue;
       }
-      if (!txt(login.totp) && designation.startsWith('totp_')) {
-        login.totp = value;
+      if (!txt(login.totp) && (designation.startsWith('totp_') || isTotpFieldName(designation) || isTotpFieldName(fieldName))) {
+        login.totp = extractTotpValue(raw) || value;
         continue;
       }
     } else if (Number(cipher.type) === 3 && cipher.card) {
@@ -327,7 +334,7 @@ export function parseOnePassword1Pif(textRaw: string): CiphersImportPayload {
       if (uri) uris.push(uri);
     }
     if (Number(cipher.type) === 1) {
-      (cipher.login as Record<string, unknown>).uris = uris.length ? uris.map((uri) => ({ uri, match: null })) : null;
+      setLoginUris(cipher.login as Record<string, unknown>, uris);
       (cipher.login as Record<string, unknown>).password = val(details?.password);
     }
     cipher.notes = val(details?.notesPlain);
@@ -394,7 +401,7 @@ export function parseOnePassword1PuxJson(textRaw: string): CiphersImportPayload 
           }
           const fallbackUrl = normalizeUri(item?.overview?.url || '');
           if (fallbackUrl) urls.push(fallbackUrl);
-          (cipher.login as Record<string, unknown>).uris = urls.length ? urls.map((uri) => ({ uri, match: null })) : null;
+          setLoginUris(cipher.login as Record<string, unknown>, urls);
         }
 
         for (const loginField of item?.details?.loginFields || []) {
@@ -413,7 +420,7 @@ export function parseOnePassword1PuxJson(textRaw: string): CiphersImportPayload 
               login.password = lv;
               continue;
             }
-            if (designation.includes('totp') || fieldName.toLowerCase().includes('totp')) {
+            if (designation.includes('totp') || isTotpFieldName(fieldName) || isTotpFieldName(fieldType)) {
               login.totp = lv;
               continue;
             }
@@ -510,12 +517,7 @@ export function parseOnePassword1PuxJson(textRaw: string): CiphersImportPayload 
             } else if (Number(cipher.type) === 1) {
               const login = cipher.login as Record<string, unknown>;
               if (fieldId === 'url') {
-                const uri = normalizeUri(fieldValue);
-                if (uri) {
-                  const uris = Array.isArray(login.uris) ? login.uris : [];
-                  uris.push({ uri, match: null });
-                  login.uris = uris;
-                }
+                addLoginUri(login, fieldValue);
                 continue;
               }
               if (fieldId === 'username' && !txt(login.username)) {
@@ -526,8 +528,11 @@ export function parseOnePassword1PuxJson(textRaw: string): CiphersImportPayload 
                 login.password = fieldValue;
                 continue;
               }
-              if ((fieldId === 'oneTimePassword' || fieldId === 'totp') && !txt(login.totp)) {
-                login.totp = fieldValue;
+              if (
+                (fieldId === 'oneTimePassword' || fieldId === 'totp' || fieldType === 'otp' || isTotpFieldName(fieldTitleLocal)) &&
+                !txt(login.totp)
+              ) {
+                login.totp = extractTotpValue(fieldValueObj) || fieldValue;
                 continue;
               }
             }
