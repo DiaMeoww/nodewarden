@@ -22,6 +22,7 @@ import {
   updateProfile,
 } from '@/lib/api/auth';
 import {
+  AccountPasskeyPrfUnavailableError,
   assertAccountPasskey,
   buildAccountPasskeyPrfKeySet,
   buildAccountPasskeyPrfKeySetFromPrfKey,
@@ -66,7 +67,29 @@ export default function useAccountSecurityActions(options: UseAccountSecurityAct
   } = options;
 
   return useMemo(
-    () => ({
+    () => {
+      function confirmSaveLoginOnlyAccountPasskey(): Promise<boolean> {
+        return new Promise((resolve) => {
+          let settled = false;
+          const finish = (shouldSave: boolean) => {
+            if (settled) return;
+            settled = true;
+            onSetConfirm(null);
+            resolve(shouldSave);
+          };
+          onSetConfirm({
+            title: t('txt_account_passkey_direct_unlock_unavailable_title'),
+            message: t('txt_account_passkey_direct_unlock_unavailable_message'),
+            confirmText: t('txt_save_login_only_passkey'),
+            cancelText: t('txt_do_not_save'),
+            showIcon: true,
+            onConfirm: () => finish(true),
+            onCancel: () => finish(false),
+          });
+        });
+      }
+
+      return ({
       async changePassword(currentPassword: string, nextPassword: string, nextPassword2: string) {
         if (!profile) return;
         if (!currentPassword || !nextPassword) {
@@ -188,7 +211,7 @@ export default function useAccountSecurityActions(options: UseAccountSecurityAct
         return listAccountPasskeys(authedFetch);
       },
 
-      async createAccountPasskey(name: string, masterPassword: string, directUnlock: boolean): Promise<AccountPasskeyCredential> {
+      async createAccountPasskey(name: string, masterPassword: string, directUnlock: boolean): Promise<AccountPasskeyCredential | null> {
         if (!profile) throw new Error(t('txt_profile_unavailable'));
         const normalizedPassword = String(masterPassword || '');
         if (!normalizedPassword) throw new Error(t('txt_master_password_is_required'));
@@ -197,21 +220,32 @@ export default function useAccountSecurityActions(options: UseAccountSecurityAct
         const options = await getAccountPasskeyAttestationOptions(authedFetch, derived.hash);
         const pending = await createAccountPasskeyCredential(options);
         let keySet = null;
+        let savedWithoutDirectUnlock = false;
         if (directUnlock) {
           if (!session?.symEncKey || !session?.symMacKey) throw new Error(t('txt_vault_key_unavailable'));
-          keySet = await buildAccountPasskeyPrfKeySet(pending, {
-            symEncKey: session.symEncKey,
-            symMacKey: session.symMacKey,
-          });
+          try {
+            keySet = await buildAccountPasskeyPrfKeySet(pending, {
+              symEncKey: session.symEncKey,
+              symMacKey: session.symMacKey,
+            });
+          } catch (error) {
+            if (!(error instanceof AccountPasskeyPrfUnavailableError)) throw error;
+            const shouldSaveLoginOnly = await confirmSaveLoginOnlyAccountPasskey();
+            if (!shouldSaveLoginOnly) {
+              onNotify('warning', t('txt_account_passkey_not_saved'));
+              return null;
+            }
+            savedWithoutDirectUnlock = true;
+          }
         }
         const credential = await saveAccountPasskey(authedFetch, {
           name: normalizedName,
           token: pending.token,
           deviceResponse: pending.request,
-          supportsPrf: pending.supportsPrf,
+          supportsPrf: keySet ? true : savedWithoutDirectUnlock ? false : pending.supportsPrf,
           keySet,
         });
-        onNotify('success', t('txt_account_passkey_saved'));
+        onNotify('success', savedWithoutDirectUnlock ? t('txt_account_passkey_saved_login_only') : t('txt_account_passkey_saved'));
         return credential;
       },
 
@@ -369,7 +403,8 @@ export default function useAccountSecurityActions(options: UseAccountSecurityAct
           },
         });
       },
-    }),
+      });
+    },
     [
       authedFetch,
       clearDisableTotpDialog,

@@ -19,7 +19,7 @@ interface SettingsPageProps {
   onGetApiKey: (masterPassword: string) => Promise<string>;
   onRotateApiKey: (masterPassword: string) => Promise<string>;
   onListAccountPasskeys: () => Promise<AccountPasskeyCredential[]>;
-  onCreateAccountPasskey: (name: string, masterPassword: string, directUnlock: boolean) => Promise<AccountPasskeyCredential>;
+  onCreateAccountPasskey: (name: string, masterPassword: string, directUnlock: boolean) => Promise<AccountPasskeyCredential | null>;
   onEnableAccountPasskeyDirectUnlock: (id: string, masterPassword: string) => Promise<void>;
   onDeleteAccountPasskey: (id: string, masterPassword: string) => Promise<void>;
   onLockTimeoutChange: (minutes: 0 | 1 | 5 | 15 | 30) => void;
@@ -179,8 +179,8 @@ export default function SettingsPage(props: SettingsPageProps) {
         setApiKeyDialogOpen(true);
         props.onNotify?.('success', t('txt_api_key_rotated'));
       } else if (masterPasswordPrompt === 'createPasskey') {
-        await props.onCreateAccountPasskey(accountPasskeyName, masterPassword, accountPasskeyDirectUnlock);
-        await refreshAccountPasskeys();
+        const credential = await props.onCreateAccountPasskey(accountPasskeyName, masterPassword, accountPasskeyDirectUnlock);
+        if (credential) await refreshAccountPasskeys();
       } else if (masterPasswordPrompt === 'enablePasskeyDirectUnlock') {
         if (!accountPasskeyPromptId) throw new Error(t('txt_account_passkey_not_found'));
         await props.onEnableAccountPasskeyDirectUnlock(accountPasskeyPromptId, masterPassword);

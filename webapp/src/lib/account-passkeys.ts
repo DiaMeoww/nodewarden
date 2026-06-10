@@ -1,4 +1,5 @@
 import { base64ToBytes, bytesToBase64, decryptBw, encryptBw, hkdfExpand, toBufferSource } from './crypto';
+import { t } from './i18n';
 import type { AccountPasskeyPrfOption } from './types';
 
 const LOGIN_WITH_PRF_SALT = 'passwordless-login';
@@ -23,6 +24,13 @@ export interface AccountPasskeyPrfKeySet {
   encryptedPrivateKey: string;
 }
 
+export class AccountPasskeyPrfUnavailableError extends Error {
+  constructor() {
+    super(t('txt_account_passkey_direct_unlock_unavailable_error'));
+    this.name = 'AccountPasskeyPrfUnavailableError';
+  }
+}
+
 function bytesToBase64Url(bytes: Uint8Array): string {
   return bytesToBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
@@ -38,7 +46,7 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 }
 
 function cloneCreationOptions(options: any): PublicKeyCredentialCreationOptions {
-  if (!options || typeof options !== 'object') throw new Error('Invalid passkey creation options');
+  if (!options || typeof options !== 'object') throw new Error(t('txt_invalid_passkey_creation_options'));
   return {
     ...options,
     challenge: toArrayBuffer(base64UrlToBytes(options.challenge)),
@@ -56,7 +64,7 @@ function cloneCreationOptions(options: any): PublicKeyCredentialCreationOptions 
 }
 
 function cloneRequestOptions(options: any): PublicKeyCredentialRequestOptions {
-  if (!options || typeof options !== 'object') throw new Error('Invalid passkey assertion options');
+  if (!options || typeof options !== 'object') throw new Error(t('txt_invalid_passkey_assertion_options'));
   return {
     ...options,
     challenge: toArrayBuffer(base64UrlToBytes(options.challenge)),
@@ -131,7 +139,7 @@ function publicKeyCredentialBase(credential: PublicKeyCredential): Record<string
 
 function assertionRequest(credential: PublicKeyCredential): Record<string, unknown> {
   if (!(credential.response instanceof AuthenticatorAssertionResponse)) {
-    throw new Error('Invalid passkey assertion response');
+    throw new Error(t('txt_invalid_passkey_assertion_response'));
   }
   return {
     ...publicKeyCredentialBase(credential),
@@ -148,7 +156,7 @@ function assertionRequest(credential: PublicKeyCredential): Record<string, unkno
 
 function attestationRequest(credential: PublicKeyCredential): Record<string, unknown> {
   if (!(credential.response instanceof AuthenticatorAttestationResponse)) {
-    throw new Error('Invalid passkey registration response');
+    throw new Error(t('txt_invalid_passkey_registration_response'));
   }
   const transports = typeof credential.response.getTransports === 'function'
     ? credential.response.getTransports()
@@ -167,7 +175,7 @@ export async function assertAccountPasskey(
   response: { options: unknown; token: string }
 ): Promise<AccountPasskeyAssertion> {
   if (!window.PublicKeyCredential || !navigator.credentials) {
-    throw new Error('Passkey is not supported in this browser');
+    throw new Error(t('txt_passkey_browser_not_supported'));
   }
   const nativeOptions = cloneRequestOptions(response.options);
   (nativeOptions as any).extensions = {
@@ -176,7 +184,7 @@ export async function assertAccountPasskey(
   };
   const credential = await navigator.credentials.get({ publicKey: nativeOptions });
   if (!(credential instanceof PublicKeyCredential)) {
-    throw new Error('No passkey was selected');
+    throw new Error(t('txt_no_passkey_selected'));
   }
   const prfResult = (credential.getClientExtensionResults() as any).prf?.results?.first;
   return {
@@ -190,7 +198,7 @@ export async function createAccountPasskeyCredential(
   response: { options: unknown; token: string }
 ): Promise<PendingAccountPasskeyCredential> {
   if (!window.PublicKeyCredential || !navigator.credentials) {
-    throw new Error('Passkey is not supported in this browser');
+    throw new Error(t('txt_passkey_browser_not_supported'));
   }
   const nativeOptions = cloneCreationOptions(response.options);
   (nativeOptions as any).extensions = {
@@ -199,7 +207,7 @@ export async function createAccountPasskeyCredential(
   };
   const credential = await navigator.credentials.create({ publicKey: nativeOptions });
   if (!(credential instanceof PublicKeyCredential)) {
-    throw new Error('No passkey was created');
+    throw new Error(t('txt_no_passkey_created'));
   }
   const supportsPrf = !!(credential.getClientExtensionResults() as any).prf?.enabled;
   return {
@@ -214,7 +222,7 @@ export async function createAccountPasskeyCredential(
 function parseRsaEncryptedUserKey(value: string): Uint8Array {
   const text = String(value || '').trim();
   const [type, payload] = text.split('.');
-  if (type !== '4' || !payload) throw new Error('Unsupported encrypted user key');
+  if (type !== '4' || !payload) throw new Error(t('txt_unsupported_encrypted_user_key'));
   return base64ToBytes(payload);
 }
 
@@ -236,11 +244,11 @@ export async function buildAccountPasskeyPrfKeySet(
   };
   const assertion = await navigator.credentials.get({ publicKey: assertionOptions });
   if (!(assertion instanceof PublicKeyCredential)) {
-    throw new Error('Passkey verification failed');
+    throw new Error(t('txt_passkey_verification_failed'));
   }
   const prfResult = (assertion.getClientExtensionResults() as any).prf?.results?.first;
   if (!prfResult) {
-    throw new Error('This passkey does not support direct vault unlock');
+    throw new AccountPasskeyPrfUnavailableError();
   }
   return buildAccountPasskeyPrfKeySetFromPrfKey(await prfOutputToKey(prfResult), userKey);
 }
@@ -285,7 +293,7 @@ export async function unlockVaultKeyWithAccountPasskeyPrf(
   const encryptedPrivateKey = option.EncryptedPrivateKey || option.encryptedPrivateKey || '';
   const encryptedUserKey = option.EncryptedUserKey || option.encryptedUserKey || '';
   if (!encryptedPrivateKey || !encryptedUserKey) {
-    throw new Error('Passkey cannot unlock this vault');
+    throw new Error(t('txt_passkey_cannot_unlock_vault'));
   }
   const privateKeyBytes = await decryptBw(encryptedPrivateKey, prfKey.slice(0, 32), prfKey.slice(32, 64));
   const privateKey = await crypto.subtle.importKey(
@@ -300,7 +308,7 @@ export async function unlockVaultKeyWithAccountPasskeyPrf(
     privateKey,
     toBufferSource(parseRsaEncryptedUserKey(encryptedUserKey))
   ));
-  if (userKeyBytes.length < 64) throw new Error('Invalid passkey vault key');
+  if (userKeyBytes.length < 64) throw new Error(t('txt_invalid_passkey_vault_key'));
   return {
     symEncKey: bytesToBase64(userKeyBytes.slice(0, 32)),
     symMacKey: bytesToBase64(userKeyBytes.slice(32, 64)),
