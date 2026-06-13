@@ -92,6 +92,10 @@ function buildCsvString(rows: string[][]): string {
   return `${rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n')}\r\n`;
 }
 
+function buildSingleRowCsvString(values: string[]): string {
+  return values.map(escapeCsvCell).join(',');
+}
+
 function isCipherString(value: string): boolean {
   return /^\d+\.[A-Za-z0-9+/=]+\|[A-Za-z0-9+/=]+(?:\|[A-Za-z0-9+/=]+)?$/.test(String(value || '').trim());
 }
@@ -473,10 +477,9 @@ function buildFolderNameById(foldersRaw: unknown): Map<string, string> {
 
 function buildBitwardenCsvLoginUri(login: Record<string, unknown> | null): string {
   const uris = Array.isArray(login?.uris) ? login.uris : [];
-  return uris
+  return buildSingleRowCsvString(uris
     .map((uri) => (isRecord(uri) ? csvText(uri.uri).trim() : ''))
-    .filter(Boolean)
-    .join('\n');
+    .filter(Boolean));
 }
 
 export function buildBitwardenCsvString(bitwardenJsonDoc: Record<string, unknown>): string {
