@@ -22,6 +22,7 @@ import {
 } from './account-passkeys';
 import { isAuthRequestExpired } from '../services/storage-auth-request-repo';
 import { createPasskeyUserVerificationToken } from '../utils/user-verification-token';
+import { constantTimeEquals, verifyApiKey } from '../utils/api-key';
 
 const TWO_FACTOR_REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const TWO_FACTOR_PROVIDER_AUTHENTICATOR = 0;
@@ -104,18 +105,6 @@ function parseCookieValue(request: Request, name: string): string | null {
     return value ? decodeURIComponent(value) : null;
   }
   return null;
-}
-
-function constantTimeEquals(a: string, b: string): boolean {
-  const encA = new TextEncoder().encode(a);
-  const encB = new TextEncoder().encode(b);
-  if (encA.length !== encB.length) return false;
-
-  let diff = 0;
-  for (let i = 0; i < encA.length; i++) {
-    diff |= encA[i] ^ encB[i];
-  }
-  return diff === 0;
 }
 
 function readBodyValue(body: Record<string, string>, names: string[]): string | undefined {
@@ -341,7 +330,7 @@ export async function handleToken(request: Request, env: Env): Promise<Response>
     let valid = false;
     const normalizedAuthRequestId = String(authRequestId || '').trim();
     if (normalizedAuthRequestId) {
-      const authRequest = await storage.getAuthRequestById(normalizedAuthRequestId);
+      const authRequest = await storage.getAuthRequestByIdForUser(normalizedAuthRequestId, user.id);
       valid = !!(
         authRequest &&
         authRequest.userId === user.id &&
@@ -430,9 +419,11 @@ export async function handleToken(request: Request, env: Env): Promise<Response>
         }
         user.totpSecret = null;
         user.totpRecoveryCode = createRecoveryCode();
+        user.securityStamp = generateUUID();
         user.updatedAt = new Date().toISOString();
         await storage.saveUser(user);
         await storage.deleteRefreshTokensByUserId(user.id);
+        AuthService.invalidateUserCache(user.id);
         rememberRequested = false;
       } else {
         // Unsupported provider for this server profile behaves as an invalid 2FA attempt.
@@ -688,7 +679,7 @@ export async function handleToken(request: Request, env: Env): Promise<Response>
       return identityErrorResponse('Account is disabled', 'invalid_grant', 400);
     }
 
-    if (!user.apiKey || !constantTimeEquals(clientSecret, user.apiKey)) {
+    if (!user.apiKey || !(await verifyApiKey(clientSecret, user.apiKey))) {
       await rateLimit.recordFailedLogin(loginIdentifier);
       await safeWriteAuditEvent(env, {
         actorUserId: user.id,

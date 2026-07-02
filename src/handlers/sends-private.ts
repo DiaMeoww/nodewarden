@@ -134,7 +134,7 @@ export async function handleGetSends(request: Request, env: Env, userId: string)
 export async function handleGetSend(request: Request, env: Env, userId: string, sendId: string): Promise<Response> {
   void request;
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, userId);
 
   if (!send || send.userId !== userId) {
     return errorResponse('Send not found', 404);
@@ -401,7 +401,7 @@ export async function handleGetSendFileUpload(
 ): Promise<Response> {
   void request;
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, userId);
   if (!send || send.userId !== userId) {
     return errorResponse('Send not found', 404);
   }
@@ -436,7 +436,7 @@ export async function handleUploadSendFile(
   fileId: string
 ): Promise<Response> {
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, userId);
   if (!send || send.userId !== userId) {
     return errorResponse('Send not found. Unable to save the file.', 404);
   }
@@ -472,7 +472,7 @@ export async function handlePublicUploadSendFile(
   }
 
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, claims.userId);
   if (!send || send.userId !== claims.userId) {
     return errorResponse('Send not found. Unable to save the file.', 404);
   }
@@ -485,7 +485,7 @@ export async function handlePublicUploadSendFile(
 
 export async function handleUpdateSend(request: Request, env: Env, userId: string, sendId: string): Promise<Response> {
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, userId);
   if (!send || send.userId !== userId) {
     return errorResponse('Send not found', 404);
   }
@@ -632,7 +632,7 @@ export async function handleUpdateSend(request: Request, env: Env, userId: strin
 
 export async function handleDeleteSend(request: Request, env: Env, userId: string, sendId: string): Promise<Response> {
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, userId);
   if (!send || send.userId !== userId) {
     return errorResponse('Send not found', 404);
   }
@@ -698,7 +698,7 @@ export async function handleBulkDeleteSends(request: Request, env: Env, userId: 
 
 export async function handleRemoveSendPassword(request: Request, env: Env, userId: string, sendId: string): Promise<Response> {
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, userId);
   if (!send || send.userId !== userId) {
     return errorResponse('Send not found', 404);
   }
@@ -719,7 +719,7 @@ export async function handleRemoveSendPassword(request: Request, env: Env, userI
 
 export async function handleRemoveSendAuth(request: Request, env: Env, userId: string, sendId: string): Promise<Response> {
   const storage = new StorageService(env.DB);
-  const send = await storage.getSend(sendId);
+  const send = await storage.getSendForUser(sendId, userId);
   if (!send || send.userId !== userId) {
     return errorResponse('Send not found', 404);
   }

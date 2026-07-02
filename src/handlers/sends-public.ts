@@ -3,7 +3,6 @@ import { StorageService } from '../services/storage';
 import { RateLimitService, getClientIdentifier } from '../services/ratelimit';
 import { jsonResponse, errorResponse } from '../utils/response';
 import { sanitizeDownloadContentType } from '../utils/content-type';
-import { LIMITS } from '../config/limits';
 import {
   createSendAccessToken,
   createSendFileDownloadToken,
@@ -113,10 +112,9 @@ export async function handleAccessSendFile(
   idOrAccessId: string,
   fileId: string
 ): Promise<Response> {
-  const secret = (env.JWT_SECRET || '').trim();
-  if (!secret || secret.length < LIMITS.auth.jwtSecretMinLength) {
-    return errorResponse('Server configuration error', 500);
-  }
+  const safeSecret = getSafeJwtSecret(env);
+  if (!safeSecret.ok) return safeSecret.response;
+  const { secret } = safeSecret;
 
   const storage = new StorageService(env.DB);
   const send = await resolveSendFromIdOrAccessId(storage, idOrAccessId);

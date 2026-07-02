@@ -1,4 +1,4 @@
-import { Env, User, DEFAULT_DEV_SECRET } from '../types';
+import { Env, User } from '../types';
 import { StorageService } from '../services/storage';
 import { AuthService } from '../services/auth';
 import { RateLimitService, getClientIdentifier } from '../services/ratelimit';
@@ -6,6 +6,7 @@ import { auditRequestMetadata, writeAuditEvent, safeWriteAuditEvent } from '../s
 import { jsonResponse, errorResponse } from '../utils/response';
 import { generateUUID } from '../utils/uuid';
 import { LIMITS } from '../config/limits';
+import { hashApiKey } from '../utils/api-key';
 import { isTotpEnabled, verifyTotpToken } from '../utils/totp';
 import { createRecoveryCode, recoveryCodeEquals } from '../utils/recovery-code';
 import { buildAccountKeys } from '../utils/user-decryption';
@@ -149,10 +150,9 @@ function normalizeMasterPasswordHint(input: string | null | undefined): string |
   return normalized ? normalized : null;
 }
 
-function jwtSecretUnsafeReason(env: Env): 'missing' | 'default' | 'too_short' | null {
+function jwtSecretUnsafeReason(env: Env): 'missing' | 'too_short' | null {
   const secret = (env.JWT_SECRET || '').trim();
   if (!secret) return 'missing';
-  if (secret === DEFAULT_DEV_SECRET) return 'default';
   if (secret.length < LIMITS.auth.jwtSecretMinLength) return 'too_short';
   return null;
 }
@@ -241,9 +241,7 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
   if (unsafe) {
     const message = unsafe === 'missing'
       ? 'JWT_SECRET is not set'
-      : unsafe === 'default'
-        ? 'JWT_SECRET is using the default/sample value. Please change it.'
-        : 'JWT_SECRET must be at least 32 characters';
+      : 'JWT_SECRET must be at least 32 characters';
     return errorResponse(message, 400);
   }
 
@@ -1194,29 +1192,28 @@ async function apiKey(request: Request, env: Env, userId: string, rotate: boolea
   const valid = await auth.verifyPassword(currentHash, user.masterPasswordHash, user.email);
   if (!valid) return errorResponse('Invalid password', 400);
 
-  if (rotate || user.apiKey === null) {
-    // Upstream apikeys are 30-character random alphanumeric strings
-    user.apiKey = randomStringAlphanum(LIMITS.auth.clientSecretLength);
-    if (rotate) {
-      user.securityStamp = generateUUID();
-      await storage.deleteRefreshTokensByUserId(user.id);
-    }
-    user.updatedAt = new Date().toISOString();
-    await storage.saveUser(user);
-    AuthService.invalidateUserCache(user.id);
-    await writeAuditEvent(storage, {
-      actorUserId: user.id,
-      action: rotate ? 'account.api_key.rotate' : 'account.api_key.create',
-      category: 'security',
-      level: rotate ? 'security' : 'info',
-      targetType: 'user',
-      targetId: user.id,
-      metadata: auditRequestMetadata(request),
-    });
+  // Only the fresh secret is returned once; the database stores a hash.
+  const plainApiKey = randomStringAlphanum(LIMITS.auth.clientSecretLength);
+  user.apiKey = await hashApiKey(plainApiKey);
+  if (rotate) {
+    user.securityStamp = generateUUID();
+    await storage.deleteRefreshTokensByUserId(user.id);
   }
+  user.updatedAt = new Date().toISOString();
+  await storage.saveUser(user);
+  AuthService.invalidateUserCache(user.id);
+  await writeAuditEvent(storage, {
+    actorUserId: user.id,
+    action: rotate ? 'account.api_key.rotate' : 'account.api_key.create',
+    category: 'security',
+    level: rotate ? 'security' : 'info',
+    targetType: 'user',
+    targetId: user.id,
+    metadata: auditRequestMetadata(request),
+  });
 
   return jsonResponse({
-    apiKey: user.apiKey,
+    apiKey: plainApiKey,
     revisionDate: user.updatedAt,
     object: 'apiKey',
   });

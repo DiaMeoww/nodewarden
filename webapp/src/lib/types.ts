@@ -290,7 +290,7 @@ export interface ListResponse<T> {
 
 export interface WebBootstrapResponse {
   defaultKdfIterations?: number;
-  jwtUnsafeReason?: 'missing' | 'default' | 'too_short' | null;
+  jwtUnsafeReason?: 'missing' | 'too_short' | null;
   jwtSecretMinLength?: number;
   registrationInviteRequired?: boolean;
 }

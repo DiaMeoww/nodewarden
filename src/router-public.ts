@@ -1,5 +1,4 @@
 import { LIMITS } from './config/limits';
-import { DEFAULT_DEV_SECRET } from './types';
 import {
   handleAccessSend,
   handleAccessSendFile,
@@ -34,7 +33,7 @@ import { StorageService } from './services/storage';
 import type { Env } from './types';
 
 type PublicRateLimiter = (category?: string, maxRequests?: number) => Promise<Response | null>;
-type JwtUnsafeReason = 'missing' | 'default' | 'too_short' | null;
+type JwtUnsafeReason = 'missing' | 'too_short' | null;
 
 export interface WebBootstrapResponse {
   defaultKdfIterations: number;
@@ -308,9 +307,7 @@ export async function buildWebBootstrapResponse(env: Env): Promise<WebBootstrapR
   const jwtUnsafeReason =
     !secret
       ? 'missing'
-      : secret === DEFAULT_DEV_SECRET
-        ? 'default'
-        : secret.length < LIMITS.auth.jwtSecretMinLength
+      : secret.length < LIMITS.auth.jwtSecretMinLength
           ? 'too_short'
           : null;
   const storage = new StorageService(env.DB);

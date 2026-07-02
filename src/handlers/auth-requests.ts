@@ -201,7 +201,7 @@ export async function handleCreateAuthRequest(request: Request, env: Env): Promi
 
 export async function handleGetAuthRequest(request: Request, env: Env, userId: string, id: string): Promise<Response> {
   const storage = new StorageService(env.DB);
-  const authRequest = await storage.getAuthRequestById(id);
+  const authRequest = await storage.getAuthRequestByIdForUser(id, userId);
   if (!authRequest || authRequest.userId !== userId) return errorResponse('Not found', 404);
   return jsonResponse(toAuthRequestResponse(request, authRequest));
 }
@@ -239,7 +239,7 @@ export async function handleUpdateAuthRequest(request: Request, env: Env, userId
   const body = await readJsonBody(request);
   if (!body) return errorResponse('Invalid request payload', 400);
 
-  const authRequest = await storage.getAuthRequestById(id);
+  const authRequest = await storage.getAuthRequestByIdForUser(id, userId);
   if (!authRequest || authRequest.userId !== userId || isAuthRequestExpired(authRequest)) {
     return errorResponse('Not found', 404);
   }
@@ -275,7 +275,7 @@ export async function handleUpdateAuthRequest(request: Request, env: Env, userId
     masterPasswordHash,
   });
   if (!updated) return errorResponse('Auth request has already been answered.', 409);
-  const updatedRequest = await storage.getAuthRequestById(id);
+  const updatedRequest = await storage.getAuthRequestByIdForUser(id, userId);
   // Match Bitwarden upstream behavior: only approval wakes the originating anonymous
   // client. Denials are not pushed to avoid leaking that a login attempt was rejected.
   if (approved) {

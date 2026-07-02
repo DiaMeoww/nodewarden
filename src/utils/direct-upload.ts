@@ -1,5 +1,5 @@
 import { LIMITS } from '../config/limits';
-import { DEFAULT_DEV_SECRET, Env } from '../types';
+import { Env } from '../types';
 import { errorResponse } from './response';
 
 export interface DirectUploadPayload {
@@ -28,7 +28,7 @@ export function buildDirectUploadUrl(request: Request, path: string, token: stri
 
 export function getSafeJwtSecret(env: Env): string | null {
   const secret = (env.JWT_SECRET || '').trim();
-  if (!secret || secret.length < LIMITS.auth.jwtSecretMinLength || secret === DEFAULT_DEV_SECRET) {
+  if (!secret || secret.length < LIMITS.auth.jwtSecretMinLength) {
     return null;
   }
   return secret;

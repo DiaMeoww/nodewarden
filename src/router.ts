@@ -1,4 +1,4 @@
-import { DEFAULT_DEV_SECRET, Env } from './types';
+import { Env } from './types';
 import { AuthService } from './services/auth';
 import { RateLimitService, getClientIdentifier } from './services/ratelimit';
 import { handleCors, errorResponse } from './utils/response';
@@ -6,12 +6,22 @@ import { LIMITS } from './config/limits';
 import { handleAuthenticatedRoute } from './router-authenticated';
 import { handlePublicRoute } from './router-public';
 
-function jwtSecretUnsafeReason(env: Env): 'missing' | 'default' | 'too_short' | null {
+function jwtSecretUnsafeReason(env: Env): 'missing' | 'too_short' | null {
   const secret = (env.JWT_SECRET || '').trim();
   if (!secret) return 'missing';
-  if (secret === DEFAULT_DEV_SECRET) return 'default';
   if (secret.length < LIMITS.auth.jwtSecretMinLength) return 'too_short';
   return null;
+}
+
+function canServeWithUnsafeJwtSecret(path: string, method: string): boolean {
+  if (method === 'OPTIONS') return true;
+  if (method === 'GET' && (path === '/api/web-bootstrap' || path === '/web-bootstrap')) return true;
+  if (method === 'GET' && (path === '/config' || path === '/api/config' || path === '/api/version')) return true;
+  if (method === 'GET' && path === '/.well-known/appspecific/com.chrome.devtools.json') return true;
+  if (method === 'GET' && path === '/fill-assist/manifest.json') return true;
+  if (method === 'GET' && /^\/fill-assist\/[^/]+$/i.test(path)) return true;
+  if (method === 'GET' && /^\/icons\/[^/]+\/icon\.png$/i.test(path)) return true;
+  return false;
 }
 
 function isImportBypassRequest(request: Request, path: string, method: string): boolean {
@@ -85,13 +95,13 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
       }
     }
 
-    const publicResponse = await handlePublicRoute(request, env, path, method, enforcePublicRateLimit);
-    if (publicResponse) return publicResponse;
-
     const secretIssue = jwtSecretUnsafeReason(env);
-    if (secretIssue) {
+    if (secretIssue && !canServeWithUnsafeJwtSecret(path, method)) {
       return errorResponse('Server configuration error: JWT_SECRET is not set or too weak', 500);
     }
+
+    const publicResponse = await handlePublicRoute(request, env, path, method, enforcePublicRateLimit);
+    if (publicResponse) return publicResponse;
 
     const auth = new AuthService(env);
     const authHeader = request.headers.get('Authorization');

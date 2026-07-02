@@ -669,7 +669,7 @@ const zhTW: Record<string, string> = {
   "txt_jwt_secret_value_label": "值：",
   "txt_jwt_secret_value_requirement": "最低 {min} 位隨機字符",
   "txt_jwt_what_is": "JWT 是什麼",
-  "txt_jwt_what_is_body": "JWT_SECRET 是服務端用來簽發和校驗登錄令牌的密鑰。如果它缺失、過短，或者仍然使用示例值，實例就不能安全地正常使用。",
+  "txt_jwt_what_is_body": "JWT_SECRET 是服務端用來簽發和校驗登錄令牌的密鑰。如果它缺失或過短，實例就不能安全地正常使用。",
   "txt_how_to_fix": "處理步驟（添加 / 更換）",
   "txt_jwt_fix_step_1": "你可以繼續下一步，不影響使用。",
   "txt_jwt_fix_step_2": "如果當前密鑰不是強隨機值，建議使用下方 32 位生成器。",

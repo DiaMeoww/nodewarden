@@ -669,7 +669,7 @@ const es: Record<string, string> = {
   "txt_jwt_secret_value_label": "Valor:",
   "txt_jwt_secret_value_requirement": "Cadena aleatoria de al menos {min} caracteres",
   "txt_jwt_what_is": "Qué es JWT",
-  "txt_jwt_what_is_body": "JWT_SECRET es la clave de firma del lado del servidor utilizada para emitir y verificar tokens de inicio de sesión. Si no está presente, es demasiado corta o todavía usa el valor de ejemplo, la instancia no es segura para uso normal.",
+  "txt_jwt_what_is_body": "JWT_SECRET es la clave de firma del lado del servidor utilizada para emitir y verificar tokens de inicio de sesión. Si no está presente o es demasiado corta, la instancia no es segura para uso normal.",
   "txt_how_to_fix": "Cómo corregirlo",
   "txt_jwt_fix_step_1": "Abra las variables de entorno de su despliegue.",
   "txt_jwt_fix_step_2": "Si su clave actual no es lo suficientemente aleatoria, use el generador de 32 caracteres a continuación.",

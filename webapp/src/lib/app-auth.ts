@@ -42,7 +42,7 @@ export interface PendingPasskeyPassword {
   kdfIterations: number;
 }
 
-export type JwtUnsafeReason = 'missing' | 'default' | 'too_short';
+export type JwtUnsafeReason = 'missing' | 'too_short';
 
 export interface BootstrapAppResult {
   defaultKdfIterations: number;

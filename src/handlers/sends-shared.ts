@@ -1,4 +1,4 @@
-import { Env, Send, SendAuthType, SendResponse, SendType, DEFAULT_DEV_SECRET } from '../types';
+import { Env, Send, SendAuthType, SendResponse, SendType } from '../types';
 import {
   notifyUserSendCreate,
   notifyUserSendDelete,
@@ -371,7 +371,7 @@ export function hasEmailAuth(send: Send): boolean {
 
 export function getSafeJwtSecret(env: Env): { ok: true; secret: string } | { ok: false; response: Response } {
   const secret = (env.JWT_SECRET || '').trim();
-  if (!secret || secret.length < LIMITS.auth.jwtSecretMinLength || secret === DEFAULT_DEV_SECRET) {
+  if (!secret || secret.length < LIMITS.auth.jwtSecretMinLength) {
     return { ok: false, response: errorResponse('Server configuration error', 500) };
   }
   return { ok: true, secret };

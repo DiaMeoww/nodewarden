@@ -669,7 +669,7 @@ const en: Record<string, string> = {
   "txt_jwt_secret_value_label": "Value:",
   "txt_jwt_secret_value_requirement": "Random string with at least {min} characters",
   "txt_jwt_what_is": "What is JWT?",
-  "txt_jwt_what_is_body": "JWT_SECRET is the server-side signing key used to issue and verify login tokens. If it is missing, too short, or still using the sample value, the instance is not safe to use normally.",
+  "txt_jwt_what_is_body": "JWT_SECRET is the server-side signing key used to issue and verify login tokens. If it is missing or too short, the instance is not safe to use normally.",
   "txt_how_to_fix": "How to fix",
   "txt_jwt_fix_step_1": "Open your deployment environment variables.",
   "txt_jwt_fix_step_2": "If your current key is not random enough, use the 32-character generator below.",
