@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'preact/compat';
 import { useEffect } from 'preact/hooks';
 import { Link, Route, Switch } from 'wouter';
-import { ArrowUpDown, Cloud, FileClock, Globe2, LogOut, Settings as SettingsIcon, Shield, ShieldUser } from 'lucide-preact';
+import { ArrowUpDown, Cloud, FileClock, Globe2, LogOut, Settings as SettingsIcon, Shield, ShieldCheck, ShieldUser } from 'lucide-preact';
 import type { ImportAttachmentFile, ImportResultSummary } from '@/components/ImportPage';
 import LoadingState from '@/components/LoadingState';
 import type { AdminBackupImportResponse, AdminBackupRunResponse, AdminBackupSettings, RemoteBackupBrowserResponse } from '@/lib/api/backup';
@@ -13,6 +13,8 @@ import type { ExportRequest } from '@/lib/export-formats';
 
 const VaultPage = lazy(() => import('@/components/VaultPage'));
 const SendsPage = lazy(() => import('@/components/SendsPage'));
+const PasswordGeneratorPage = lazy(() => import('@/components/PasswordGeneratorPage'));
+const PasswordSecurityPage = lazy(() => import('@/components/PasswordSecurityPage'));
 const TotpCodesPage = lazy(() => import('@/components/TotpCodesPage'));
 const SettingsPage = lazy(() => import('@/components/SettingsPage'));
 const DomainRulesPage = lazy(() => import('@/components/DomainRulesPage'));
@@ -207,6 +209,16 @@ export default function AppMainRoutes(props: AppMainRoutesProps) {
 
   return (
     <Switch>
+      <Route path="/security/password-health">
+        <Suspense fallback={<RouteContentFallback />}>
+          <PasswordSecurityPage ciphers={props.decryptedCiphers} loading={props.ciphersLoading} />
+        </Suspense>
+      </Route>
+      <Route path="/generator">
+        <Suspense fallback={<RouteContentFallback />}>
+          <PasswordGeneratorPage />
+        </Suspense>
+      </Route>
       <Route path="/sends">
         <Suspense fallback={<RouteContentFallback />}>
           <SendsPage
@@ -327,6 +339,10 @@ export default function AppMainRoutes(props: AppMainRoutesProps) {
                 <Link href={props.settingsAccountRoute} className="mobile-settings-link">
                   <SettingsIcon size={18} />
                   <span>{t('nav_account_settings')}</span>
+                </Link>
+                <Link href="/security/password-health" className="mobile-settings-link">
+                  <ShieldCheck size={18} />
+                  <span>{t('nav_password_security')}</span>
                 </Link>
                 <Link href="/settings/security/device-management" className="mobile-settings-link">
                   <Shield size={18} />

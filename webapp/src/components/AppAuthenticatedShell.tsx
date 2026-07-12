@@ -1,4 +1,4 @@
-import { ArrowUpDown, Check, ChevronDown, Clock3, Cloud, FileClock, Folder as FolderIcon, KeyRound, Lock, LogOut, MonitorSmartphone, Send as SendIcon, Settings as SettingsIcon, ShieldUser, SlidersHorizontal, Users } from 'lucide-preact';
+import { ArrowUpDown, Check, ChevronDown, Clock3, Cloud, FileClock, Folder as FolderIcon, KeyRound, Lock, LogOut, MonitorSmartphone, Send as SendIcon, Settings as SettingsIcon, ShieldCheck, ShieldUser, SlidersHorizontal, Sparkles, Users } from 'lucide-preact';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Link } from 'wouter';
@@ -55,7 +55,7 @@ export default function AppAuthenticatedShell(props: AppAuthenticatedShellProps)
   const isDomainRulesRoute = props.location === '/settings/domain-rules';
   const isLogRoute = props.location === '/logs';
   const isAdmin = isAdminProfile(props.profile);
-  const vaultActive = props.location === '/vault' || props.location === '/vault/totp';
+  const vaultActive = props.location === '/vault' || props.location === '/vault/totp' || props.location === '/security/password-health';
   const deviceManagementActive = props.location === DEVICE_MANAGEMENT_ROUTE || props.location === LEGACY_DEVICE_MANAGEMENT_ROUTE;
   const settingsActive = props.location === '/settings' || props.location === props.settingsAccountRoute || props.location === '/settings/domain-rules' || deviceManagementActive;
   const flatSettingsActive = settingsActive && !deviceManagementActive;
@@ -175,6 +175,8 @@ export default function AppAuthenticatedShell(props: AppAuthenticatedShellProps)
     <>
       {renderSideLink('/vault', props.location === '/vault', <KeyRound size={16} />, t('nav_vault_items'))}
       {renderSideLink('/vault/totp', props.location === '/vault/totp', <Clock3 size={16} />, t('txt_verification_code'))}
+      {renderSideLink('/security/password-health', props.location === '/security/password-health', <ShieldCheck size={16} />, t('nav_password_security'))}
+      {renderSideLink('/generator', props.location === '/generator', <Sparkles size={16} />, t('nav_generator'))}
       {renderSideLink('/sends', props.location === '/sends', <SendIcon size={16} />, t('nav_sends'))}
       {renderSideLink('/settings', flatSettingsActive, <SettingsIcon size={16} />, t('txt_settings'))}
       {renderSideLink(DEVICE_MANAGEMENT_ROUTE, deviceManagementActive, <MonitorSmartphone size={16} />, t('nav_device_management'))}
@@ -195,8 +197,10 @@ export default function AppAuthenticatedShell(props: AppAuthenticatedShellProps)
         <>
           {renderSubLink('/vault', props.location === '/vault', t('nav_vault_items'))}
           {renderSubLink('/vault/totp', props.location === '/vault/totp', t('txt_verification_code'))}
+          {renderSubLink('/security/password-health', props.location === '/security/password-health', t('nav_password_security'))}
         </>
       )}
+      {renderSideLink('/generator', props.location === '/generator', <Sparkles size={16} />, t('nav_generator'))}
       {renderSideLink('/sends', props.location === '/sends', <SendIcon size={16} />, t('nav_sends'))}
       {renderNavGroup(
         'settings',
@@ -326,6 +330,10 @@ export default function AppAuthenticatedShell(props: AppAuthenticatedShellProps)
           <Link href="/vault/totp" className={`mobile-tab ${props.mobilePrimaryRoute === '/vault/totp' ? 'active' : ''}`}>
             <Clock3 size={18} />
             <span>{t('txt_verification_code')}</span>
+          </Link>
+          <Link href="/generator" className={`mobile-tab ${props.mobilePrimaryRoute === '/generator' ? 'active' : ''}`}>
+            <Sparkles size={18} />
+            <span>{t('nav_generator')}</span>
           </Link>
           <Link href="/sends" className={`mobile-tab ${props.mobilePrimaryRoute === '/sends' ? 'active' : ''}`}>
             <SendIcon size={18} />

@@ -1140,8 +1140,12 @@ export async function updateAuthorizedDeviceName(
   if (!resp.ok) throw new Error(t('txt_update_device_note_failed'));
 }
 
-export async function deleteAllAuthorizedDevices(authedFetch: AuthedFetch): Promise<void> {
-  const resp = await authedFetch('/api/devices', { method: 'DELETE' });
+export async function deleteAllAuthorizedDevices(authedFetch: AuthedFetch, masterPasswordHash: string): Promise<void> {
+  const resp = await authedFetch('/api/devices', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ masterPasswordHash }),
+  });
   if (!resp.ok) throw new Error(t('txt_remove_all_devices_failed'));
 }
 
