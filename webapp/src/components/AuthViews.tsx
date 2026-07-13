@@ -27,6 +27,7 @@ interface AuthViewsProps {
   pendingAction: 'login' | 'passkey' | 'register' | 'unlock' | null;
   unlockReady: boolean;
   unlockPreparing: boolean;
+  sessionRefreshError?: string;
   loginValues: LoginValues;
   pendingPasskeyPasswordEmail?: string | null;
   passkeyPassword: string;
@@ -50,6 +51,7 @@ interface AuthViewsProps {
   onLogout: () => void;
   onTogglePasswordHint: () => void;
   onShowLockedPasswordHint: () => void;
+  onRetrySessionRefresh: () => void;
 }
 
 function PasswordField(props: {
@@ -154,6 +156,19 @@ export default function AuthViews(props: AuthViewsProps) {
             </div>
             {props.unlockPreparing ? (
               <p className="muted standalone-muted">{t('txt_loading')}</p>
+            ) : null}
+            {props.sessionRefreshError ? (
+              <div className="offline-mode-notice" role="alert" aria-live="polite">
+                <AlertTriangle size={18} />
+                <div>
+                  <strong>{props.sessionRefreshError}</strong>
+                  <div>
+                    <button type="button" className="auth-link-btn" onClick={props.onRetrySessionRefresh}>
+                      {t('txt_refresh')}
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : null}
             <button type="submit" className="btn btn-primary full" disabled={unlockBusy || passkeyBusy || props.unlockPreparing || !props.unlockReady}>
               <Unlock size={16} className="btn-icon" />

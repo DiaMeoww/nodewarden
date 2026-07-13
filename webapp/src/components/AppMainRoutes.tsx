@@ -210,9 +210,19 @@ export default function AppMainRoutes(props: AppMainRoutesProps) {
   return (
     <Switch>
       <Route path="/security/password-health">
-        <Suspense fallback={<RouteContentFallback />}>
-          <PasswordSecurityPage ciphers={props.decryptedCiphers} loading={props.ciphersLoading} />
-        </Suspense>
+        <div className="stack">
+          {props.mobileLayout && (
+            <div className="mobile-settings-subhead">
+              <button type="button" className="btn btn-secondary small mobile-settings-back" onClick={() => props.onNavigate(props.settingsHomeRoute)}>
+                <span className="btn-icon" aria-hidden="true">{"<"}</span>
+                {t('txt_back')}
+              </button>
+            </div>
+          )}
+          <Suspense fallback={<RouteContentFallback />}>
+            <PasswordSecurityPage ciphers={props.decryptedCiphers} loading={props.ciphersLoading} />
+          </Suspense>
+        </div>
       </Route>
       <Route path="/generator">
         <Suspense fallback={<RouteContentFallback />}>
@@ -334,15 +344,24 @@ export default function AppMainRoutes(props: AppMainRoutesProps) {
         {props.profile ? (
           <section className="card mobile-settings-card settings-home-card">
             <div className="settings-home-section">
+              <h3>{t('nav_group_tools')}</h3>
+              <div className="mobile-settings-links">
+                <Link href="/security/password-health" className="mobile-settings-link">
+                  <ShieldCheck size={18} />
+                  <span>{t('nav_password_security')}</span>
+                </Link>
+                <Link href={props.importRoute} className="mobile-settings-link">
+                  <ArrowUpDown size={18} />
+                  <span>{t('nav_import_export')}</span>
+                </Link>
+              </div>
+            </div>
+            <div className="settings-home-section">
               <h3>{t('txt_settings')}</h3>
               <div className="mobile-settings-links">
                 <Link href={props.settingsAccountRoute} className="mobile-settings-link">
                   <SettingsIcon size={18} />
                   <span>{t('nav_account_settings')}</span>
-                </Link>
-                <Link href="/security/password-health" className="mobile-settings-link">
-                  <ShieldCheck size={18} />
-                  <span>{t('nav_password_security')}</span>
                 </Link>
                 <Link href="/settings/security/device-management" className="mobile-settings-link">
                   <Shield size={18} />
@@ -354,25 +373,14 @@ export default function AppMainRoutes(props: AppMainRoutesProps) {
                 </Link>
               </div>
             </div>
-            <div className="settings-home-section">
-              <h3>{t('nav_group_data_backup')}</h3>
-              <div className="mobile-settings-links">
-                <Link href={props.importRoute} className="mobile-settings-link">
-                  <ArrowUpDown size={18} />
-                  <span>{t('nav_import_export')}</span>
-                </Link>
-                {isAdmin && (
+            {isAdmin && (
+              <div className="settings-home-section">
+                <h3>{t('nav_group_system_management')}</h3>
+                <div className="mobile-settings-links">
                   <Link href="/backup" className="mobile-settings-link">
                     <Cloud size={18} />
                     <span>{t('nav_backup_strategy')}</span>
                   </Link>
-                )}
-              </div>
-            </div>
-            {isAdmin && (
-              <div className="settings-home-section">
-                <h3>{t('nav_group_management')}</h3>
-                <div className="mobile-settings-links">
                   <Link href="/admin" className="mobile-settings-link">
                     <ShieldUser size={18} />
                     <span>{t('nav_admin_panel')}</span>
