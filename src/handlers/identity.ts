@@ -206,6 +206,16 @@ function buildPreloginResponse(
     kdfIterations,
     kdfMemory,
     kdfParallelism,
+    // Current official servers expose the consolidated KDF model alongside
+    // the legacy flat fields. Keep both shapes while clients migrate.
+    kdfSettings: {
+      kdfType,
+      iterations: kdfIterations,
+      memory: kdfMemory,
+      parallelism: kdfParallelism,
+    },
+    salt: null,
+    // Preserve the historic NodeWarden aliases for older integrations.
     KdfSettings: {
       KdfType: kdfType,
       Iterations: kdfIterations,
